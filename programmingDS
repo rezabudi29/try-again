@@ -1,0 +1,21 @@
+## Programming Data Science with RStudio, Use retail.csv datasheet
+
+##Import Datasheet
+
+retail1<-read.csv("data_input/retail.csv")
+retail1
+
+##Set dataframe 
+
+retail1<- retail1[, -c(1:2)]
+retail1$Order.Date<- as.Date(retail1$Order.Date, "%m/%d/%y")
+retail1$Ship.Date<- as.Date(retail1$Ship.Date, "%m/%d/%y")
+head(retail1)
+retail1$Customer.ID<- as.character(retail1$Customer.ID)
+retail1$Product.Name<- as.character(retail1$Product.Name)
+names(retail)
+summary(retail1)
+
+##Table and plotting(heatmap)
+heatmap(xtabs(Sales ~ Sub.Category + Ship.Mode, retail1), Colv = NA, Rowv = NA, cexCol = 0.6, scale = "column")
+
