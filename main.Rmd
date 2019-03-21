@@ -1,73 +1,100 @@
-#import datasheet
+---
+title: "main"
+output: html_document
+---
 
-vids<- read.csv("data_input/USvideos.csv")
-head(vids)
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
-##call library of plotting
+```{r}
+library(dplyr)
+library(grid)
+library(class)
+library(gmodels)
+library(gtools)
+```
 
-library(ggplot2)
-library(GGally)
-library(ggthemes)
-library(ggpubr)
-library(magrittr)
+## R Markdown
 
-##call library date
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
-library(lubridate)
-library(leaflet)
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
-##preprocessing data
+```{r cars}
+summary(cars)
+```
 
-vids$trending_date<- ydm(vids$trending_date)
-vids$title<- as.character(vids$title)
-vids$category_id <- sapply(as.character(vids$category_id), switch, 
-                           "1" = "Film and Animation",
-                           "2" = "Autos and Vehicles", 
-                           "10" = "Music", 
-                           "15" = "Pets and Animals", 
-                           "17" = "Sports",
-                           "19" = "Travel and Events", 
-                           "20" = "Gaming", 
-                           "22" = "People and Blogs", 
-                           "23" = "Comedy",
-                           "24" = "Entertainment", 
-                           "25" = "News and Politics",
-                           "26" = "Howto and Style", 
-                           "27" = "Education",
-                           "28" = "Science and Technology", 
-                           "29" = "Nonprofit and Activism",
-                           "43" = "Shows")
-vids$category_id <- as.factor(vids$category_id)
-    ##change timezone of publish
-head(vids$publish_time)
-vids$publish_time<- ymd_hms(vids$publish_time,tz="Asia/Bangkok")
+## Including Plots
 
-    ##publish hour
-vids$publish_hour <- hour(vids$publish_time)
+You can also embed plots, for example:
 
-pw <- function(x){
-    if(x < 8){
-      x <- "12am to 8am"
-    }else if(x >= 8 & x < 16){
-      x <- "8am to 3pm"
-    }else{
-      x <- "3pm to 12am"
-    }  
-}
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
 
-vids$publish_when <- as.factor(sapply(vids$publish_hour, pw))
-vids$publish_wday <- as.factor(weekdays(vids$publish_time))
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 
-        ##
-        
-vids$publish_wday <- ordered(vids$publish_wday, levels=c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
-vids[,c("views", "likes", "dislikes", "comment_count")] <- lapply(vids[,c("views", "likes", "dislikes", "comment_count")], as.numeric)
+```{r}
+loans<- read.csv("data_input/loan2017Q4.csv")
+head(loans)
+str(loans)
+```
+```{r}
+table(loans$not_paid)
+```
+```{r}
+summary(loans[loans$not_paid == 0, "dti"])
+```
+```{r}
+summary(loans[loans$not_paid == 1, "dti"])
+```
+```{r}
+xtabs(dti~ purpose + not_paid, loans)
+```
+```{r}
+plot(xtabs(dti~ grade + not_paid, loans), main= "Assigned Grade of Loan Vs Default")
+```
+```{r}
+##predict credit risk
 
-vids.u <- vids[match(unique(vids$title), vids$title),]
+set.seed(417)
+intrain <- sample(nrow(loans), nrow(loans)*0.8)
+loans_train<- loans[intrain, ]
+loans_test<- loans[-intrain, ]
 
-vids.u$timetotrend <- vids.u$trending_date - as.Date(vids.u$publish_time)
-vids.u$timetotrend <- as.factor(ifelse(vids.u$timetotrend <= 7, vids.u$timetotrend, "8+"))
+```
 
-#plotting
+```{r}
+creditrisk<-glm(not_paid~verified + purpose + installment + int_rate + home_ownership + grdCtoA+ annual_inc, loans_train, family = "binomial")
+summary(creditrisk)
+```
+```{r}
+loans_test$pred.Risk<- predict(creditrisk, loans_test, type = "response")
+```
 
-plot(as.factor(vids.u$publish_hour), vids.u$likes/vids.u$views)
+```{r}
+predict(creditrisk, head(loans_test), type = "response")
+```
+```{r}
+predict(creditrisk, head(loans_test), , type = "link")
+```
+```{r}
+predict(creditrisk, head(loans_test))
+```
+##log-odds: -0.7124156 odds: 0.490458 p/(1-p) = 0.490458 p = 0.490458/1.490458 = 0.3290653
+
+```{r}
+##visualization
+
+hist(loans_test$pred.Risk, breaks = 20)
+```
+```{r}
+##test prediction 
+
+loans_test[1:10, 15:17]
+```
+```{r}
+table("predicted"=as.numeric(loans_test$pred.Risk>=0.5), "actual"=loans_test$not_paid)
+```
+
